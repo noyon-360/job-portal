@@ -1,0 +1,52 @@
+=== A. HAPPY PATH: JOBS (expect 200 / 201) ===
+curl -i http://localhost:3000/api/jobs
+curl -i http://localhost:3000/api/jobs/1
+curl -i -X POST -H "Content-Type: application/json" -d "{\"title\":\"QA Engineer\",\"company\":\"Acme\",\"location\":\"Dhaka\",\"salary\":500}" http://localhost:3000/api/jobs
+curl -i -X PUT -H "Content-Type: application/json" -d "{\"salary\":777}" http://localhost:3000/api/jobs/3
+curl -i -X DELETE http://localhost:3000/api/jobs/3
+
+=== B. HAPPY PATH: APPLICANTS (expect 200 / 201) ===
+curl -i http://localhost:3000/api/applicants
+curl -i http://localhost:3000/api/applicants/1
+curl -i "http://localhost:3000/api/applicants?jobId=1"
+curl -i -X POST -H "Content-Type: application/json" -d "{\"name\":\"Karim\",\"email\":\"karim@example.com\",\"jobId\":2}" http://localhost:3000/api/applicants
+curl -i -X PUT -H "Content-Type: application/json" -d "{\"name\":\"Karim Hasan\"}" http://localhost:3000/api/applicants/2
+curl -i -X DELETE http://localhost:3000/api/applicants/2
+
+=== C. MISSPELT / UNKNOWN ROUTES (expect 404 from the gateway) ===
+curl -i http://localhost:3000/api/job
+curl -i http://localhost:3000/api/aplicants
+curl -i http://localhost:3000/api/jobss/1
+curl -i http://localhost:3000/hello
+curl -i http://localhost:3000/api
+
+=== D. RESOURCE NOT FOUND (expect 404) ===
+curl -i http://localhost:3000/api/jobs/9999
+curl -i http://localhost:3000/api/applicants/9999
+curl -i -X DELETE http://localhost:3000/api/jobs/9999
+curl -i -X PUT -H "Content-Type: application/json" -d "{\"salary\":100}" http://localhost:3000/api/jobs/9999
+
+=== E. BAD INPUT (expect 400) ===
+curl -i http://localhost:3000/api/jobs/abc
+curl -i -X POST -H "Content-Type: application/json" -d "{}" http://localhost:3000/api/jobs
+curl -i -X POST -H "Content-Type: application/json" -d "{bad json" http://localhost:3000/api/jobs
+curl -i -X POST -H "Content-Type: application/json" -d "{\"title\":\"\",\"company\":\"X\",\"location\":\"Y\"}" http://localhost:3000/api/jobs
+curl -i -X POST -H "Content-Type: application/json" -d "{\"title\":\"A\",\"company\":\"B\",\"location\":\"C\",\"salary\":-5}" http://localhost:3000/api/jobs
+curl -i -X PUT -H "Content-Type: application/json" -d "{}" http://localhost:3000/api/jobs/1
+curl -i -X POST -H "Content-Type: application/json" -d "{\"name\":\"Bob\",\"email\":\"not-an-email\",\"jobId\":1}" http://localhost:3000/api/applicants
+curl -i -X POST -H "Content-Type: application/json" -d "{\"name\":\"Bob\",\"email\":\"bob@x.com\",\"jobId\":99}" http://localhost:3000/api/applicants
+
+=== F. WRONG METHOD (expect 405) ===
+curl -i -X DELETE http://localhost:3000/api/jobs
+curl -i -X PATCH http://localhost:3000/api/jobs/1
+curl -i -X POST http://localhost:3000/api/jobs/1
+curl -i -X DELETE http://localhost:3000/api/applicants
+
+=== G. BYPASS ATTEMPT: call the hidden ports directly (expect 403) ===
+curl -i http://localhost:4001/jobs
+curl -i http://localhost:4002/applicants
+curl -i -H "x-gateway-key: guess" http://localhost:4001/jobs
+
+=== H. SERVICE DOWN (stop the Jobs service with Ctrl+C first, expect 503) ===
+curl -i http://localhost:3000/api/jobs
+curl -i -X POST -H "Content-Type: application/json" -d "{\"name\":\"Karim\",\"email\":\"karim@example.com\",\"jobId\":1}" http://localhost:3000/api/applicants

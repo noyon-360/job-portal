@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Job Portal Tester</title>
+<style>
+  :root {
+    --bg: #f4f5f7; --card: #fff; --text: #1d2330; --muted: #6b7280; --line: #e3e5ea;
+    --primary: #2563eb; --ok: #15803d; --okbg: #dcfce7; --warn: #b45309; --warnbg: #fef3c7;
+    --err: #b91c1c; --errbg: #fee2e2; --code: #0f172a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
+  header { background: var(--code); color: #fff; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  header h1 { font-size: 18px; margin: 0; }
+  header small { color: #94a3b8; }
+  main { max-width: 1200px; margin: 0 auto; padding: 20px 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
+  .card h2 { font-size: 16px; margin: 0 0 12px; display: flex; justify-content: space-between; align-items: center; }
+  .full { grid-column: 1 / -1; }
+  form { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  input, select, textarea { width: 100%; padding: 7px 9px; border: 1px solid var(--line); border-radius: 6px; font: inherit; background: #fff; color: inherit; }
+  textarea { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; resize: vertical; }
+  button { padding: 7px 12px; border: 0; border-radius: 6px; font: inherit; cursor: pointer; background: var(--primary); color: #fff; }
+  button.ghost { background: #eef2ff; color: var(--primary); }
+  button.danger { background: var(--errbg); color: var(--err); }
+  button.small { padding: 3px 8px; font-size: 12px; }
+  .actions { grid-column: 1 / -1; display: flex; gap: 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  th { color: var(--muted); font-weight: 600; }
+  td.btns { white-space: nowrap; text-align: right; }
+  .empty { color: var(--muted); text-align: center; padding: 14px; }
+  .row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .row select { width: 110px; }
+  .row input { flex: 1; min-width: 180px; }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-weight: 600; font-size: 12px; }
+  .s2 { background: var(--okbg); color: var(--ok); }
+  .s4 { background: var(--warnbg); color: var(--warn); }
+  .s5, .s0 { background: var(--errbg); color: var(--err); }
+  pre { background: var(--code); color: #e2e8f0; padding: 12px; border-radius: 8px; overflow: auto; max-height: 340px; margin: 8px 0 0; font-size: 13px; }
+  .reqline { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; word-break: break-all; }
+  #log { list-style: none; margin: 0; padding: 0; max-height: 240px; overflow: auto; }
+  #log li { padding: 5px 0; border-bottom: 1px solid var(--line); display: flex; gap: 8px; align-items: center; cursor: pointer; }
+  #log li:hover { background: var(--bg); }
+  #log .t { color: var(--muted); font-size: 12px; margin-left: auto; }
+  #status { font-size: 13px; }
+  @media (max-width: 800px) { main { grid-template-columns: 1fr; } form { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <div><h1>Job Portal Tester</h1><small>Every request goes through the API Gateway on port 3000</small></div>
+  <div id="status">Checking services…</div>
+</header>
+
+<main>
+  <!-- JOBS -->
+  <section class="card">
+    <h2>Jobs <button class="ghost small" onclick="loadJobs(false)">Refresh</button></h2>
+    <form id="jobForm">
+      <input type="hidden" id="jobId">
+      <input id="jobTitle" placeholder="Title *">
+      <input id="jobCompany" placeholder="Company *">
+      <input id="jobLocation" placeholder="Location *">
+      <input id="jobSalary" placeholder="Salary (number, optional)">
+      <div class="actions">
+        <button type="submit" id="jobSubmit">Add job</button>
+        <button type="button" class="ghost" id="jobCancel" hidden onclick="resetJobForm()">Cancel edit</button>
+      </div>
+    </form>
+    <table>
+      <thead><tr><th>ID</th><th>Title</th><th>Company</th><th>Location</th><th>Salary</th><th></th></tr></thead>
+      <tbody id="jobsBody"></tbody>
+    </table>
+  </section>
+
+  <!-- APPLICANTS -->
+  <section class="card">
+    <h2>Applicants <button class="ghost small" onclick="loadApplicants(false)">Refresh</button></h2>
+    <form id="appForm">
+      <input type="hidden" id="appId">
+      <input id="appName" placeholder="Name *">
+      <input id="appEmail" placeholder="Email *">
+      <select id="appJob"><option value="">Job *</option></select>
+      <select id="appFilter" title="Filter list by job" onchange="loadApplicants(false)"><option value="">Show: all jobs</option></select>
+      <div class="actions">
+        <button type="submit" id="appSubmit">Add applicant</button>
+        <button type="button" class="ghost" id="appCancel" hidden onclick="resetAppForm()">Cancel edit</button>
+      </div>
+    </form>
+    <table>
+      <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Job</th><th></th></tr></thead>
+      <tbody id="appsBody"></tbody>
+    </table>
+  </section>
+
+  <!-- REQUEST TESTER -->
+  <section class="card">
+    <h2>Request tester</h2>
+    <div class="presets" id="presets"></div>
+    <div class="row">
+      <select id="rMethod"><option>GET</option><option>POST</option><option>PUT</option><option>DELETE</option><option>PATCH</option></select>
+      <input id="rPath" value="/api/jobs">
+      <button onclick="sendRaw()">Send</button>
+    </div>
+    <textarea id="rBody" rows="5" placeholder='Request body (raw text, sent as JSON). Leave empty for none. e.g. {"title":"QA"}'></textarea>
+  </section>
+
+  <!-- RESPONSE -->
+  <section class="card">
+    <h2>Response</h2>
+    <div class="reqline" id="resLine">Send a request to see the response here.</div>
+    <pre id="resBody">—</pre>
+  </section>
+
+  <section class="card full">
+    <h2>Request history <button class="ghost small" onclick="clearLog()">Clear</button></h2>
+    <ul id="log"></ul>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let jobsCache = [];
+const history = [];
+
+// ---------- core: every call goes through here ----------
+async function call(method, path, body, rawBody, quiet) {
+  const opts = { method, headers: {}, cache: 'no-store' }; // always hit the server (no 304s in the gateway log)
+  if (rawBody !== undefined && rawBody !== '') {
+    opts.headers['Content-Type'] = 'application/json';
+    opts.body = rawBody;
+  } else if (body !== undefined) {
+    opts.headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(body);
+  }
+  const t0 = performance.now();
+  let status = 0, data;
+  try {
+    const res = await fetch(path, opts);
+    status = res.status;
+    const text = await res.text();
+    try { data = JSON.parse(text); } catch { data = text; }
+  } catch (e) {
+    data = { error: 'Network error: is the gateway running on port 3000?' };
+  }
+  const entry = { method, path, reqBody: opts.body, status, data, ms: Math.round(performance.now() - t0), time: new Date() };
+  if (quiet) return entry; // background table refresh: don't log or overwrite the response panel
+  history.unshift(entry);
+  showResponse(entry);
+  renderLog();
+  if (status === 0 || status >= 500 || $('status').textContent.includes('🔴')) checkStatus();
+  return entry;
+}
+
+function statusClass(s) { return 's' + String(s)[0]; }
+function statusText(s) {
+  return { 0: 'NO RESPONSE', 200: 'OK', 201: 'Created', 400: 'Bad Request', 403: 'Forbidden', 404: 'Not Found',
+           405: 'Method Not Allowed', 500: 'Server Error', 503: 'Service Unavailable', 504: 'Gateway Timeout' }[s] || '';
+}
+function badge(s) {
+  const b = document.createElement('span');
+  b.className = 'badge ' + statusClass(s);
+  b.textContent = s + ' ' + statusText(s);
+  return b;
+}
+
+function showResponse(e) {
+  const line = $('resLine');
+  line.replaceChildren(badge(e.status), document.createTextNode(`  ${e.method} ${e.path}  ·  ${e.ms} ms`));
+  let out = typeof e.data === 'string' ? e.data : JSON.stringify(e.data, null, 2);
+  if (e.reqBody) out = `// request body: ${e.reqBody}\n\n` + out;
+  $('resBody').textContent = out;
+}
+
+function renderLog() {
+  const ul = $('log');
+  ul.replaceChildren(...history.slice(0, 100).map((e) => {
+    const li = document.createElement('li');
+    const txt = document.createElement('span');
+    txt.className = 'reqline';
+    txt.textContent = `${e.method} ${e.path}`;
+    const t = document.createElement('span');
+    t.className = 't';
+    t.textContent = e.time.toLocaleTimeString() + ' · ' + e.ms + ' ms';
+    li.append(badge(e.status), txt, t);
+    li.onclick = () => showResponse(e);
+    return li;
+  }));
+}
+function clearLog() { history.length = 0; renderLog(); }
+
+// small helper to build table cells safely (textContent, never innerHTML)
+function td(text) { const c = document.createElement('td'); c.textContent = text ?? '—'; return c; }
+function btn(label, cls, fn) { const b = document.createElement('button'); b.type = 'button'; b.className = 'small ' + cls; b.textContent = label; b.onclick = fn; return b; }
+function emptyRow(cols, msg) { const tr = document.createElement('tr'); const c = td(msg); c.colSpan = cols; c.className = 'empty'; tr.append(c); return tr; }
+
+// ---------- JOBS ----------
+async function loadJobs(quiet) {
+  const r = await call('GET', '/api/jobs', undefined, undefined, quiet);
+  const body = $('jobsBody');
+  if (r.status !== 200) { body.replaceChildren(emptyRow(6, r.data.error || 'Could not load jobs')); return; }
+  jobsCache = r.data;
+  body.replaceChildren(...(jobsCache.length ? jobsCache.map((j) => {
+    const tr = document.createElement('tr');
+    const b = document.createElement('td'); b.className = 'btns';
+    b.append(btn('Edit', 'ghost', () => editJob(j)), ' ', btn('Delete', 'danger', () => deleteJob(j.id)));
+    tr.append(td(j.id), td(j.title), td(j.company), td(j.location), td(j.salary), b);
+    return tr;
+  }) : [emptyRow(6, 'No jobs yet')]));
+  fillJobSelects();
+}
+
+function fillJobSelects() {
+  for (const [id, first] of [['appJob', 'Job *'], ['appFilter', 'Show: all jobs']]) {
+    const sel = $(id), keep = sel.value;
+    sel.replaceChildren(new Option(first, ''), ...jobsCache.map((j) => new Option(`#${j.id} ${j.title}`, j.id)));
+    sel.value = keep;
+  }
+}
+
+$('jobForm').onsubmit = async (ev) => {
+  ev.preventDefault();
+  const id = $('jobId').value;
+  const data = {};
+  for (const [key, el] of [['title', 'jobTitle'], ['company', 'jobCompany'], ['location', 'jobLocation']]) {
+    const v = $(el).value;
+    if (!id || v !== '') data[key] = v; // on create send everything, so the server can validate
+  }
+  const sal = $('jobSalary').value.trim();
+  if (sal !== '') data.salary = isNaN(Number(sal)) ? sal : Number(sal); // send text as-is so validation can be tested
+  const r = id ? await call('PUT', `/api/jobs/${id}`, data) : await call('POST', '/api/jobs', data);
+  if (r.status < 300) { resetJobForm(); refreshAll(); }
+};
+
+function editJob(j) {
+  $('jobId').value = j.id; $('jobTitle').value = j.title; $('jobCompany').value = j.company;
+  $('jobLocation').value = j.location; $('jobSalary').value = j.salary ?? '';
+  $('jobSubmit').textContent = `Update job #${j.id}`; $('jobCancel').hidden = false;
+}
+function resetJobForm() { $('jobForm').reset(); $('jobId').value = ''; $('jobSubmit').textContent = 'Add job'; $('jobCancel').hidden = true; }
+
+async function deleteJob(id) {
+  if (!confirm(`Delete job #${id}?`)) return;
+  const r = await call('DELETE', `/api/jobs/${id}`);
+  if (r.status === 200) refreshAll();
+}
+
+// ---------- APPLICANTS ----------
+async function loadApplicants(quiet) {
+  const f = $('appFilter').value;
+  const r = await call('GET', '/api/applicants' + (f ? `?jobId=${f}` : ''), undefined, undefined, quiet);
+  const body = $('appsBody');
+  if (r.status !== 200) { body.replaceChildren(emptyRow(5, r.data.error || 'Could not load applicants')); return; }
+  body.replaceChildren(...(r.data.length ? r.data.map((a) => {
+    const tr = document.createElement('tr');
+    const job = jobsCache.find((j) => j.id === a.jobId);
+    const b = document.createElement('td'); b.className = 'btns';
+    b.append(btn('Edit', 'ghost', () => editApp(a)), ' ', btn('Delete', 'danger', () => deleteApp(a.id)));
+    tr.append(td(a.id), td(a.name), td(a.email), td(job ? `#${a.jobId} ${job.title}` : `#${a.jobId}`), b);
+    return tr;
+  }) : [emptyRow(5, 'No applicants')]));
+}
+
+$('appForm').onsubmit = async (ev) => {
+  ev.preventDefault();
+  const id = $('appId').value;
+  const data = {};
+  if (!id || $('appName').value !== '') data.name = $('appName').value;
+  if (!id || $('appEmail').value !== '') data.email = $('appEmail').value;
+  if ($('appJob').value !== '') data.jobId = Number($('appJob').value);
+  const r = id ? await call('PUT', `/api/applicants/${id}`, data) : await call('POST', '/api/applicants', data);
+  if (r.status < 300) { resetAppForm(); refreshAll(); }
+};
+
+function editApp(a) {
+  $('appId').value = a.id; $('appName').value = a.name; $('appEmail').value = a.email; $('appJob').value = a.jobId;
+  $('appSubmit').textContent = `Update applicant #${a.id}`; $('appCancel').hidden = false;
+}
+function resetAppForm() { $('appForm').reset(); $('appId').value = ''; $('appSubmit').textContent = 'Add applicant'; $('appCancel').hidden = true; }
+
+async function deleteApp(id) {
+  if (!confirm(`Delete applicant #${id}?`)) return;
+  const r = await call('DELETE', `/api/applicants/${id}`);
+  if (r.status === 200) refreshAll();
+}
+
+// ---------- REQUEST TESTER ----------
+const PRESETS = [
+  ['Misspelt route (404)', 'GET', '/api/job', ''],
+  ['Job not found (404)', 'GET', '/api/jobs/9999', ''],
+  ['Bad id (400)', 'GET', '/api/jobs/abc', ''],
+  ['Missing fields (400)', 'POST', '/api/jobs', '{}'],
+  ['Malformed JSON (400)', 'POST', '/api/jobs', '{bad json'],
+  ['Negative salary (400)', 'POST', '/api/jobs', '{"title":"A","company":"B","location":"C","salary":-5}'],
+  ['Bad email (400)', 'POST', '/api/applicants', '{"name":"Bob","email":"not-an-email","jobId":1}'],
+  ['Unknown job (404)', 'POST', '/api/applicants', '{"name":"Bob","email":"bob@x.com","jobId":99}'],
+  ['Wrong method (405)', 'DELETE', '/api/jobs', ''],
+  ['PATCH not allowed (405)', 'PATCH', '/api/jobs/1', ''],
+];
+$('presets').replaceChildren(...PRESETS.map(([label, m, p, b]) =>
+  btn(label, 'ghost', () => { $('rMethod').value = m; $('rPath').value = p; $('rBody').value = b; sendRaw(); })));
+
+async function sendRaw() {
+  let path = $('rPath').value.trim() || '/';
+  if (!path.startsWith('/')) path = '/' + path;
+  await call($('rMethod').value, path, undefined, $('rBody').value.trim());
+  // keep the tables in sync if the request changed data
+  if ($('rMethod').value !== 'GET') refreshAll();
+}
+
+// ---------- service status ----------
+async function checkStatus() {
+  const check = async (p) => { try { return (await fetch(p, { cache: 'no-store' })).status === 200; } catch { return false; } };
+  const [jobs, apps] = await Promise.all([check('/api/jobs'), check('/api/applicants')]);
+  const dot = (ok) => (ok ? '🟢' : '🔴');
+  let gw = true;
+  try { await fetch('/api'); } catch { gw = false; }
+  $('status').textContent = gw ? `Gateway 🟢   Jobs ${dot(jobs)}   Applicants ${dot(apps)}` : 'Gateway 🔴 (not running)';
+}
+
+// Opened as a file (file:///...)? Then "/api/jobs" points at the disk, not the gateway.
+if (location.protocol === 'file:') {
+  document.body.innerHTML =
+    '<div style="max-width:560px;margin:80px auto;padding:24px;background:#fff;border:1px solid #e3e5ea;border-radius:10px;font:15px/1.6 system-ui,sans-serif">' +
+    '<h2 style="margin-top:0">Open this page through the gateway</h2>' +
+    '<p>This page was opened as a file, so it cannot reach the API.</p>' +
+    '<ol><li>Start the 3 servers (<code>npm run jobs</code>, <code>npm run applicants</code>, <code>npm run gateway</code>).</li>' +
+    '<li>Open <a href="http://localhost:3000/">http://localhost:3000/</a></li></ol></div>';
+  throw new Error('Opened via file://. Use http://localhost:3000/');
+}
+
+// Checked on load, on click, and after a request fails or while something is down
+// (not on a timer, so the gateway log stays clean).
+checkStatus();
+$('status').style.cursor = 'pointer';
+$('status').title = 'Click to re-check';
+$('status').onclick = checkStatus;
+function refreshAll() { return loadJobs(true).then(() => loadApplicants(true)); }
+refreshAll();
+</script>
+</body>
+</html>

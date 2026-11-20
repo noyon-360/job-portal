@@ -1,0 +1,13 @@
+{
+  "name": "job-portal",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "gateway": "node gateway/server.js",
+    "jobs": "node jobs-service/server.js",
+    "applicants": "node applicants-service/server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "nextId": 4,
+  "jobs": [
+    {
+      "id": 1,
+      "title": "Flutter Developer",
+      "company": "TechNova",
+      "location": "Dhaka",
+      "salary": 900
+    },
+    {
+      "id": 2,
+      "title": "Backend Engineer",
+      "company": "CloudBase",
+      "location": "Remote",
+      "salary": 1200
+    },
+    {
+      "id": 3,
+      "title": "Frontend Developer",
+      "company": "NsN",
+      "location": "Dhaka",
+      "salary": 5
+    }
+  ]
+}

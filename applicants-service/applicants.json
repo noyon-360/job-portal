@@ -1,0 +1,17 @@
+{
+  "nextId": 3,
+  "applicants": [
+    {
+      "id": 1,
+      "name": "Rahim Uddin",
+      "email": "rahim@example.com",
+      "jobId": 1
+    },
+    {
+      "id": 2,
+      "name": "Noyon",
+      "email": "noyon@gmail.com",
+      "jobId": 2
+    }
+  ]
+}
